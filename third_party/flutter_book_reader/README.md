@@ -1,0 +1,340 @@
+# 📖 flutter_book_reader
+
+[![pub package](https://img.shields.io/pub/v/flutter_book_reader.svg)](https://pub.dev/packages/flutter_book_reader)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**English | [中文](README.zh-CN.md)**
+
+> A polished, production-ready **novel & ebook reader** for Flutter — the kind of
+> reading experience your users expect from a top-tier reading app, in a single
+> widget.
+
+🔗 **[Try the live demo →](https://ck-readbook-demo.ckdgdgdg.workers.dev/)** (runs in your browser)
+
+> ⭐️ **If this package helps you, please give it a like / star to support it.**
+> Ran into a problem, or something doesn't fit your needs? Let's talk it over in the
+> [issues](../../issues) — feedback and ideas are very welcome.
+
+<!-- Click any image to open it full size. -->
+<table align="center">
+  <tr>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/1.gif"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/1.gif" width="185" alt="reading & page-curl"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/2.gif"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/2.gif" width="185" alt="themes & settings"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_1.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_1.jpeg" width="185" alt="bookshelf"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_2.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_2.jpeg" width="185" alt="reader"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_3.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_3.jpeg" width="185" alt="text selection, highlight & comment"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_4.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_4.jpeg" width="185" alt="notes panel"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_5.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_5.jpeg" width="185" alt="paragraph comments"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_6.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_6.jpeg" width="185" alt="share quote card"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_7.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_7.jpeg" width="185" alt="text-to-speech"></a></td>
+    <td align="center"><a href="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_8.jpeg"><img src="https://ck-readbook-demo.ckdgdgdg.workers.dev/example/en_8.jpeg" width="185" alt="listen playback bar"></a></td>
+  </tr>
+</table>
+
+Point `BookReader` at your own data and you instantly get real pagination,
+finger-following page-curl animations, chapter navigation, themes, and
+reading-progress persistence. Everything is driven by small, replaceable
+abstractions, so your content can come from an API, a database, local files, or
+anywhere else — without touching the reader's internals.
+
+## Why flutter_book_reader?
+
+- 🪄 **It feels like a real book.** A realistic simulation page-curl that follows
+  your finger, plus cover, slide, vertical-scroll, and no-animation modes.
+- 📐 **Real pagination, not a scroll hack.** Paragraph-aware layout measured with
+  `TextPainter`, with proper first-line indent and justification.
+- 🔌 **Bring your own everything.** Data and progress storage are plain
+  abstractions — network, DB, cloud sync, offline files all just work.
+- 🎨 **Beautiful out of the box.** Six paper themes, one-tap day/night, adjustable
+  font size / line height / spacing, and full-screen immersive reading.
+- ✍️ **Select, highlight & annotate.** Long-press selection with draggable handles,
+  wavy highlights, and comments — all surfaced in a unified notes panel.
+- 🧪 **Built to last.** A widget-free logic core that's fully unit-tested, with a
+  clean, documented architecture.
+
+## Features
+
+- **Five page modes** — a realistic **simulation** page-curl that follows your
+  finger (corner dog-ear, or a vertical curl when you swipe from the middle),
+  **cover** (incoming page slides over the current one), smooth **horizontal**
+  paging (seamless, flicker-free chapter crossing), continuous **vertical**
+  scroll (auto-loads the next / previous chapter), and **no-animation**.
+- **Full-screen immersive reading** — hides the status & system navigation bars
+  while reading, restored on exit; plus a one-tap **day / night** toggle. By
+  default the system bars reappear with the menu and hide again when it closes
+  (set `showSystemBarsWithMenu: false` to stay immersive even with the menu open).
+- **Real pagination** via `TextPainter`, paragraph-aware: reader-owned first-line
+  indent (works together with justification), paragraph spacing, and
+  justification. Reading position is preserved across font-size / line-height /
+  system-text-scale changes.
+- **Lazy chapter loading** with neighbor prefetch, a bounded LRU cache, and
+  loading & **error / retry** states.
+- **Pluggable data source** (`BookSource`) and **progress storage**
+  (`ReaderProgressStore`) — bring your own network / DB / cloud implementation.
+- **Debounced progress saving** with a flush when the app goes to background.
+- **Text selection & annotations** — long-press to select with draggable start /
+  end handles that snap to character boundaries, and a bubble toolbar with
+  **copy / highlight / comment / look-up / share**. **Highlights** (wavy underline)
+  are rendered and persisted by the reader; **copy / comment / look-up / share**
+  are pure callbacks (`onTextAction(action, ReaderSelection)`) so your app owns
+  the behavior. **Bookmarks, highlights & comments** are collected in one **Notes**
+  panel (filter by all / bookmarks / highlights / comments; tap to jump, or delete),
+  each with its own pluggable store (`ReaderBookmarkStore`, `ReaderUnderlineStore`,
+  `ReaderCommentStore`).
+- **Paragraph comments** — a tappable comment-count badge at each paragraph's end;
+  the tap is delivered via `onSegmentCommentTap` so your app renders the comment
+  list, and `commentsRefresh` refreshes badges/notes after a comment is added.
+  Readers who prefer clean text can hide the badges from the reader menu, or you
+  can drive it with `config.setSegmentCommentsVisible(visible: false)` — comments
+  themselves are untouched and still listed in the notes panel.
+- **Battery indicator** — an optional battery gauge in the footer, fed by the
+  host via `battery: ValueListenable<ReaderBatteryInfo?>` (`{ level, charging }`);
+  charging shows a green bolt, otherwise the level fills with the percentage
+  inside. `null` hides it — no native battery dependency in the package.
+- **Paid / locked chapters** — mark chapters as locked via `isChapterLocked`; a
+  locked chapter shows only its first page with your own unlock block
+  (`chapterLockBuilder`) and paging forward skips to the next chapter. Call
+  `lockRefresh` after unlocking to reveal the full chapter; the catalog shows a
+  lock icon on locked chapters.
+- **Auto page-turn** — hands-free reading via `controller.startAutoTurn(interval)`
+  / `stopAutoTurn()`. Paged modes flip every N seconds with a countdown line;
+  scroll mode auto-scrolls smoothly. Built-in menu entry + speed/exit panel; it
+  restarts on manual turns and stops at the book end or a locked chapter. Keep
+  the screen awake yourself via `isAutoTurning` (no native dependency).
+- **Chapter-end widget** — drop your own widget after every chapter's body via
+  `chapterEndBuilder` (chapter discussion, tip the author, next-chapter teaser…).
+  Pagination reserves `chapterEndReserve` height for it, so body text is never
+  pushed out or clipped; popups are yours to open.
+- **Theming & typography** — six built-in paper themes, per-theme accent color,
+  and runtime controls for font size / line height / brightness.
+- **Localization built in** — `ReaderLabels` ships **12 languages** (en, zh, es,
+  fr, ar, bn, pt, ru, hi, ur, ja, ko) via `ReaderLabels.forLanguageCode(code)`
+  (English fallback); every string is still overridable. Basic accessibility
+  semantics.
+
+## Install
+
+```yaml
+dependencies:
+  flutter_book_reader: ^1.5.13
+```
+
+```dart
+import 'package:flutter_book_reader/flutter_book_reader.dart';
+```
+
+## Quick start
+
+```dart
+BookReader(
+  source: MyBookSource(),               // your data
+  progressStore: MyProgressStore(),     // optional, defaults to no-op
+  onChapterChanged: (int index) => debugPrint('chapter $index'),
+  onPositionChanged: (ReadingPosition pos) => save(pos),
+)
+```
+
+### 1. Provide a data source
+
+`BookSource` is the only thing you must implement. It returns book metadata +
+a chapter list once, and chapter bodies on demand.
+
+```dart
+class MyBookSource extends BookSource {
+  @override
+  Future<BookManifest> loadManifest() async => BookManifest(
+        id: 42,
+        title: 'The Long Journey',
+        author: 'Jane Doe',
+        intro: '…',
+        coverColor: Colors.blueGrey,
+        chapterTitles: <String>['Chapter 1', 'Chapter 2', 'Chapter 3'],
+      );
+
+  @override
+  Future<String> loadChapterBody(int index) async {
+    // Fetch from your API / DB / assets. Paragraphs separated by '\n'.
+    return api.fetchChapter(index);
+  }
+}
+```
+
+### 2. (Optional) Persist reading progress
+
+```dart
+class PrefsProgressStore extends ReaderProgressStore {
+  @override
+  Future<ReadingPosition?> load(Object bookId) async { /* … */ }
+
+  @override
+  Future<void> save(Object bookId, ReadingPosition position) async { /* … */ }
+}
+```
+
+Built-ins: `NoopReaderProgressStore` (default) and `InMemoryReaderProgressStore`.
+
+### 3. Theming, typography & page mode
+
+```dart
+final config = ReaderConfig()
+  ..setTheme(ReaderTheme.yellow.copyWith(accentColor: const Color(0xFF3366FF)))
+  ..setFlipType(FlipType.simulation) // simulation / cover / slideHorizontal / scrollVertical / none
+  ..setFirstLineIndent(2)
+  ..setParagraphSpacing(8)
+  ..setJustify(true);
+
+BookReader(source: MyBookSource(), config: config);
+```
+
+Users can also switch theme, page mode, font size, spacing, and day / night from
+the in-reader settings menu at runtime.
+
+### 4. Localize the UI
+
+Twelve languages are built in — just pass the current language code (anything
+outside the 12 falls back to English):
+
+```dart
+BookReader(
+  source: MyBookSource(),
+  labels: ReaderLabels.forLanguageCode(
+    Localizations.localeOf(context).languageCode, // 'zh', 'en', 'ja', …
+  ),
+)
+```
+
+Or supply your own strings for full control / white-labeling:
+
+```dart
+BookReader(
+  source: MyBookSource(),
+  labels: const ReaderLabels(prevChapter: 'Previous', catalog: 'Contents'),
+)
+```
+
+### 5. Selection actions, highlights & notes
+
+**Highlights** are handled inside the reader — just plug in a store (add
+`ReaderBookmarkStore` / `ReaderCommentStore` the same way) and they render and
+persist automatically:
+
+```dart
+BookReader(
+  source: MyBookSource(),
+  underlineStore: MyUnderlineStore(), // extends ReaderUnderlineStore
+  commentStore: MyCommentStore(),     // extends ReaderCommentStore
+)
+```
+
+Built-ins for each: `Noop…Store` (default) and `InMemory…Store`.
+
+**Copy / comment / look-up / share** are delivered to you via `onTextAction` —
+the reader performs no side effects (no clipboard write, no built-in dialog), so
+you own the behavior. The `ReaderSelection` carries the chapter, chapter-space
+range, and text, which is enough to build and persist your own `Comment`:
+
+```dart
+BookReader(
+  source: MyBookSource(),
+  onTextAction: (ReaderTextAction action, ReaderSelection sel) {
+    switch (action) {
+      case ReaderTextAction.copy:
+        Clipboard.setData(ClipboardData(text: sel.text));
+      case ReaderTextAction.comment:
+        showMyCommentSheet(sel); // your own UI, then commentStore.save(...)
+      case ReaderTextAction.query:
+        openDictionary(sel.text);
+      case ReaderTextAction.share:
+        Share.share(sel.text);
+      case ReaderTextAction.highlight:
+        break; // handled internally by the reader
+    }
+  },
+)
+```
+
+Bookmarks, highlights, and comments all show up together in the in-reader
+**Notes** panel (filter by all / bookmarks / highlights / comments; tap to jump,
+or delete).
+
+For **paragraph comments**, the reader shows a count badge at each paragraph's
+end and calls `onSegmentCommentTap(ReaderSegmentTap segment)` when tapped — your
+app presents the list. After you add a comment, poke `commentsRefresh` (any
+`Listenable`, e.g. a `ValueNotifier`) and the reader reloads counts from the store.
+
+### 6. Imperative control via `BookReaderController`
+
+Pass a `BookReaderController` to drive the reader from the outside and read its
+state. It's a `ChangeNotifier`, so listen to it to keep your own UI (playback
+bar, bookmark icon…) in sync. This is what powers features like text-to-speech.
+
+```dart
+final controller = BookReaderController();
+
+BookReader(source: MyBookSource(), controller: controller);
+
+// Once controller.isReady:
+controller.nextPage();                 // also previousPage()
+controller.goToChapter(3);
+controller.goToPosition(somePosition); // e.g. jump to a bookmark / highlight
+final text = controller.currentPageText;   // feed a TTS engine
+controller.markReading(ci, sentence);       // highlight + auto page-turn as it reads
+controller.clearReading();
+
+// Bookmarks — no need to reach for the top-bar button:
+controller.toggleBookmark();                 // add / remove on the current page
+final marked = controller.isCurrentPageBookmarked;
+```
+
+Also exposes `isReady`, `chapterIndex` / `chapterCount`, `pageIndex` /
+`pageCount`, `currentChapterTitle`, `position`, `isAtBookEnd`, and menu state
+(`isMenuVisible`, `isMenuPanelExpanded`, `closeMenu()`).
+
+### 7. Promotional title page
+
+Add a **title page** before chapter 1 with `titlePageBuilder`. It's a real page in
+the flip flow — swipe back and forth, and the menu still works — shown when the
+book opens at its start. **You define the style**; the reader only positions it.
+Pass `null` (default) for no title page. The callback hands you the current
+`ReaderTheme` so your page can match the reader's day/night colors:
+
+```dart
+BookReader(
+  source: MyBookSource(),
+  titlePageBuilder: (BuildContext context, ReaderTheme theme) => MyTitlePage(
+    theme: theme,      // match paper / text / accent colors
+    // ...your own promo widget: cover, blurb, tags, reviews, etc.
+  ),
+)
+```
+
+`ReaderTitlePageBuilder` is `Widget Function(BuildContext, ReaderTheme)`. See the
+example app's `ReaderTitlePage` for a ready-made promo layout.
+
+## Architecture
+
+- `BookSource` / `ReaderProgressStore` — public extension points (abstractions).
+- `ReadingController` — pure, widget-free logic core, composed from four
+  **mixins** (content loading / pagination / navigation / vertical flow); fully
+  unit-testable.
+- `ReaderModeView` — view base class; `HorizontalReader`, `VerticalReader`, and
+  `SimulationReader` **extend** it.
+- `BookReader` — the single entry-point widget.
+
+## Example
+
+Try the **[live demo](https://ck-readbook-demo.ckdgdgdg.workers.dev/)** in your
+browser, or run it locally. A full example app (bookshelf + reader, data from
+`assets/books.json`) lives in [`example/`](example) and depends on this package
+via `path: ../`:
+
+```bash
+cd example
+flutter run
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).

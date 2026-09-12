@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ 启动页图标：adaptive-icon，系统按圆形遮罩，徽章已在安全区内 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/splash_background" />
+    <foreground android:drawable="@drawable/splash_emblem" />
+</adaptive-icon>
