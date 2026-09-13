@@ -11,6 +11,7 @@ mixin VerticalFlowMixin on ReaderControllerBase, ChapterContentMixin {
     if (last < chapterCount - 1 && !flowChapters.contains(last + 1)) {
       flowChapters.add(last + 1);
       ensureLoaded(last + 1);
+      contentRevision++;
       notifyListeners();
       return true;
     }
@@ -24,6 +25,7 @@ mixin VerticalFlowMixin on ReaderControllerBase, ChapterContentMixin {
       final int inserted = first - 1;
       flowChapters.insert(0, inserted);
       ensureLoaded(inserted);
+      contentRevision++;
       notifyListeners();
       return inserted;
     }

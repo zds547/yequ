@@ -254,7 +254,9 @@ class _BookshelfPageState extends State<BookshelfPage> {
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 96),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 220,
-        childAspectRatio: 2.4,
+        // 固定卡片高度（不随卡片宽度变矮）：窄屏两列时仍能完整容纳两行书名
+        // + 续读信息，避免长书名被卡片 clipBehavior 裁掉。
+        mainAxisExtent: 100,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
@@ -330,14 +332,18 @@ class _BookCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Text(
-                      book.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _ShelfStyle.ink,
+                    // Flexible：垂直空间不足时压缩书名（两行内省略号），
+                    // 保证下方续读信息始终可见，而不是整块被裁掉。
+                    Flexible(
+                      child: Text(
+                        book.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _ShelfStyle.ink,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),

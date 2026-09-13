@@ -69,9 +69,25 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
     super.initState();
     controller.addListener(_syncAutoScroll);
     controller.addListener(_onControllerTick);
+    controller.addListener(_onContentRevision);
+    _lastContentRevision = controller.contentRevision;
     _syncAutoScroll();
     // 控制器在视图创建前发出的定位信号（首次续读、从横向模式切入）也要处理。
     _onControllerTick();
+  }
+
+  /// 章节流 / 正文 / 排版的结构版本：滚动中的高频位置通知（setVerticalPosition）
+  /// 不 bump 此版本，故滚动过程中本视图不再整树重建；只有章节接入、正文到达、
+  /// 改字号 / 主题等真正影响列表结构时才重建（此时父级可能跳过本 widget 更新）。
+  int _lastContentRevision = 0;
+
+  void _onContentRevision() {
+    if (!mounted) return;
+    final int revision = controller.contentRevision;
+    if (revision != _lastContentRevision) {
+      _lastContentRevision = revision;
+      setState(() {});
+    }
   }
 
   /// 依据自动阅读开关启停滚动 ticker。
@@ -113,6 +129,7 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
     _autoTicker.dispose();
     controller.removeListener(_syncAutoScroll);
     controller.removeListener(_onControllerTick);
+    controller.removeListener(_onContentRevision);
     _scrollController.dispose();
     super.dispose();
   }
@@ -274,12 +291,7 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
   List<int> _blockOffsets(int idx) {
     final String? body = controller.bodyOf(idx);
     if (body == null) return const <int>[];
-    final ReaderPage blocks = controller.chapterBlocks(body);
-    final List<int> offs = List<int>.filled(blocks.length + 1, 0);
-    for (int i = 0; i < blocks.length; i++) {
-      offs[i + 1] = offs[i] + blocks[i].length;
-    }
-    return offs;
+    return controller.blockOffsetsOf(controller.chapterBlocks(idx, body));
   }
 
   /// 依据视口顶部落在哪一章 / 哪一段，更新「当前章 + 章内字符偏移 + 段内像素补偿」，
@@ -330,62 +342,68 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
         controller.hasTitlePage && controller.flowChapters.first == 0;
     final int lead = showTitle ? 1 : 0;
     // 连续滚动模式：顶部当前章节信息、底部章节进度为固定信息栏（中间列表滚动）。
+    // 阅读器运行在 edge-toEdge（透明状态栏覆盖），分页模式刻意让正文延伸到状态栏
+    // 下以避免系统栏显隐引发布局重排；竖滚模式不分页，顶部页眉须让出状态栏高度，
+    // 否则章节名与时间 / 电量等系统图标重叠。
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTapToggleMenu,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.only(
-              left: pagePadding.left,
-              right: pagePadding.right,
-              top: pagePadding.top,
-            ),
-            child: ReaderHeaderBar(
-              title: controller.currentChapterTitle,
-              theme: theme,
-            ),
-          ),
-          Expanded(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onScroll,
-              // builder 惰性构建，滚出视口的章节会被回收，避免 RenderObject 无限驻留
-              child: ListView.builder(
-                key: _listKey,
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
-                  left: pagePadding.left,
-                  right: pagePadding.right,
-                ),
-                itemCount: count + 1 + lead,
-                itemBuilder: (BuildContext context, int i) {
-                  if (showTitle && i == 0) return _titleSection(context);
-                  final int j = i - lead;
-                  return j < count
-                      ? _section(context, controller.flowChapters[j], labels)
-                      : _footer(labels);
-                },
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.only(
+                left: pagePadding.left,
+                right: pagePadding.right,
+                top: pagePadding.top,
+              ),
+              child: ReaderHeaderBar(
+                title: controller.currentChapterTitle,
+                theme: theme,
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(
-              left: pagePadding.left,
-              right: pagePadding.right,
-              bottom: pagePadding.bottom,
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onScroll,
+                // builder 惰性构建，滚出视口的章节会被回收，避免 RenderObject 无限驻留
+                child: ListView.builder(
+                  key: _listKey,
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    left: pagePadding.left,
+                    right: pagePadding.right,
+                  ),
+                  itemCount: count + 1 + lead,
+                  itemBuilder: (BuildContext context, int i) {
+                    if (showTitle && i == 0) return _titleSection(context);
+                    final int j = i - lead;
+                    return j < count
+                        ? _section(context, controller.flowChapters[j], labels)
+                        : _footer(labels);
+                  },
+                ),
+              ),
             ),
-            child: ReaderFooterBar(
-              theme: theme,
-              chapterIndex: controller.chapterIndex,
-              chapterCount: controller.chapterCount,
-              pageIndex: 0,
-              pageCount: 0, // 连续滚动无页码，仅显示章号与进度
-              progress: controller.globalProgress,
+            Padding(
+              padding: EdgeInsets.only(
+                left: pagePadding.left,
+                right: pagePadding.right,
+                bottom: pagePadding.bottom,
+              ),
+              child: ReaderFooterBar(
+                theme: theme,
+                chapterIndex: controller.chapterIndex,
+                chapterCount: controller.chapterCount,
+                pageIndex: 0,
+                pageCount: 0, // 连续滚动无页码，仅显示章号与进度
+                progress: controller.globalProgress,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -473,7 +491,7 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           ReaderProse(
-            page: _lockedPreview(controller.chapterBlocks(body)),
+            page: _lockedPreview(controller.chapterBlocks(idx, body)),
             config: config,
             chapterIndex: idx,
             chapterTitle: controller.chapterTitleAt(idx),
@@ -486,7 +504,7 @@ class _VerticalReaderState extends ReaderModeViewState<VerticalReader>
       return KeyedSubtree(
         key: _proseKeys.putIfAbsent(idx, () => GlobalKey()),
         child: ReaderProse(
-          page: controller.chapterBlocks(body),
+          page: controller.chapterBlocks(idx, body),
           config: config,
           chapterIndex: idx,
           chapterTitle: controller.chapterTitleAt(idx),

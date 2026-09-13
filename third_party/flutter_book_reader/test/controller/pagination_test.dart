@@ -201,7 +201,7 @@ void main() {
   group('chapterBlocks（纵向模式整章转块）', () {
     test('每块都是段首，且拼接后与去空行的原文一致', () async {
       final ReadingController c = await ready(FakeBookSource());
-      final ReaderPage blocks = c.chapterBlocks(c.bodyOf(0)!);
+      final ReaderPage blocks = c.chapterBlocks(0, c.bodyOf(0)!);
       expect(blocks, isNotEmpty);
       expect(blocks.every((ReaderBlock b) => b.isParagraphStart), isTrue);
       for (final ReaderBlock b in blocks) {
@@ -212,8 +212,8 @@ void main() {
 
     test('空正文得到空块列表', () async {
       final ReadingController c = await ready(FakeBookSource());
-      expect(c.chapterBlocks(''), isEmpty);
-      expect(c.chapterBlocks('\n\n   \n'), isEmpty, reason: '空行应被丢弃');
+      expect(c.chapterBlocks(1, ''), isEmpty);
+      expect(c.chapterBlocks(1, '\n\n   \n'), isEmpty, reason: '空行应被丢弃');
     });
   });
 

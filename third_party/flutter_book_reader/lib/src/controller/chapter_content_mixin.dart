@@ -37,6 +37,12 @@ mixin ChapterContentMixin on ReaderControllerBase {
 
   void clearPageCache() => _pageCache.clear();
 
+  /// 某章正文被淘汰时，联动清理与该章绑定的派生缓存（分页结果；
+  /// 后续 mixin 可覆写以追加竖滚块等缓存）。
+  void evictChapterCaches(int index) {
+    _pageCache.removeWhere((String key, _) => key.endsWith('|$index'));
+  }
+
   /// 确保某章正文已加载；完成或失败后通知刷新。
   ///
   /// 已失败的章不会自动重试——[pagesFor] 在每次 build 都会调用本方法，若不拦住
@@ -55,9 +61,11 @@ mixin ChapterContentMixin on ReaderControllerBase {
     try {
       _bodies[index] = await source.loadChapterBody(index);
       _evictIfNeeded();
+      contentRevision++;
       notifyListeners();
     } catch (_) {
       _errors.add(index);
+      contentRevision++;
       notifyListeners();
     } finally {
       _loading.remove(index);
@@ -95,7 +103,7 @@ mixin ChapterContentMixin on ReaderControllerBase {
     for (final int k in candidates) {
       if (_bodies.length <= maxCachedChapters) break;
       _bodies.remove(k);
-      _pageCache.removeWhere((String key, _) => key.endsWith('|$k'));
+      evictChapterCaches(k);
     }
   }
 }

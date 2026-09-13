@@ -32,10 +32,51 @@ mixin PaginationMixin on ReaderControllerBase, ChapterContentMixin {
       .toList(growable: false);
 
   /// 整章按段落转成文本块（不分页，供纵向连续滚动模式渲染），排版与分页一致。
-  ReaderPage chapterBlocks(String body) => <ReaderBlock>[
+  ///
+  /// 结果按「章节 + 正文身份 + 缩进」缓存：正文加载后不可变，竖滚滚动中视图频繁
+  /// 重建，若每次都对整章做 split/正则会造成明显卡顿。正文重试换新对象时身份键
+  /// 自动失效。
+  final Map<String, ReaderPage> _blocksCache = <String, ReaderPage>{};
+
+  ReaderPage chapterBlocks(int index, String body) {
+    final String key = '$index|${identityHashCode(body)}|${config.indent}';
+    return _blocksCache.putIfAbsent(
+      key,
+      () => <ReaderBlock>[
         for (final String p in _paragraphsOf(body))
           ReaderBlock(text: config.indent + p, isParagraphStart: true),
-      ];
+      ],
+    );
+  }
+
+  /// 各块首字符的章内偏移前缀和（块长度坐标，与分页 / 书签一致）。
+  /// 块列表不可变且被缓存，用 [Expando] 挂载，列表淘汰时缓存随之回收。
+  static final Expando<List<int>> _blockOffsetsCache = Expando<List<int>>();
+
+  List<int> blockOffsetsOf(ReaderPage blocks) {
+    final List<int>? cached = _blockOffsetsCache[blocks];
+    if (cached != null) return cached;
+    final List<int> offs = List<int>.filled(blocks.length + 1, 0);
+    for (int i = 0; i < blocks.length; i++) {
+      offs[i + 1] = offs[i] + blocks[i].length;
+    }
+    _blockOffsetsCache[blocks] = offs;
+    return offs;
+  }
+
+  @override
+  void clearPageCache() {
+    super.clearPageCache();
+    _blocksCache.clear();
+  }
+
+  @override
+  void evictChapterCaches(int index) {
+    super.evictChapterCaches(index);
+    _blocksCache.removeWhere(
+      (String key, _) => key.startsWith('$index|'),
+    );
+  }
 
   /// 取某章分页结果；正文未加载时返回 null 并触发加载。
   List<ReaderPage>? pagesFor(int index) {

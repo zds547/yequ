@@ -70,6 +70,11 @@ abstract class ReaderControllerBase extends ChangeNotifier {
   /// 纵向连续滚动流中已装入的章节序号（升序、连续）
   List<int> flowChapters = <int>[];
 
+  /// 竖滚视图的「结构内容」版本号：只在章节流增减、正文加载完成 / 失败、
+  /// 排版配置变化、解锁态变化时 +1。高频的阅读位置更新（[setVerticalPosition]）
+  /// 不 bump——竖滚视图据此判断是否需要重建整棵章节列表，避免滚动中逐帧重建。
+  int contentRevision = 0;
+
   /// 竖滚视图定位信号：[verticalAnchorTick] 每 +1，表示竖滚视图应把视口
   /// 滚动到 ([verticalAnchorChapter], [verticalAnchorOffset]) 对应段落。
   /// 用于首次续读与目录 / 书签跳转后的章内位置恢复。

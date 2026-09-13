@@ -182,6 +182,14 @@ class _BookReaderState extends State<BookReader>
   int _lastChapter = -1;
   Timer? _saveTimer;
 
+  /// 竖滚视图实例缓存：滚动中 [ReadingController.setVerticalPosition] 高频通知会
+  /// 重建外层 Scaffold；返回同一 widget 实例可让 Element 跳过整棵章节树的更新。
+  /// 视图自身的刷新（章节接入 / 正文到达 / 字号主题变化）由 VerticalReader 监听
+  /// contentRevision 自行 setState，不依赖父级重建。以控制器身份为键，初始化重试
+  /// 换新控制器时缓存自动作废。
+  VerticalReader? _verticalReader;
+  ReadingController? _verticalReaderController;
+
   @override
   final ValueNotifier<bool> _menuVisible = ValueNotifier<bool>(false);
 
@@ -661,7 +669,15 @@ class _BookReaderState extends State<BookReader>
           );
 
           if (_config.flipType == FlipType.scrollVertical) {
-            return VerticalReader(controller: c, onTapToggleMenu: _toggleMenu);
+            if (_verticalReader == null ||
+                !identical(_verticalReaderController, c)) {
+              _verticalReaderController = c;
+              _verticalReader = VerticalReader(
+                controller: c,
+                onTapToggleMenu: _toggleMenu,
+              );
+            }
+            return _verticalReader!;
           }
 
           // 传入“实际渲染解析出的样式与地区”：分页度量必须与屏幕渲染完全同源
