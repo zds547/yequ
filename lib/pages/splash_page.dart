@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'bookshelf_page.dart';
+import 'home_page.dart';
 
 /// 应用内启动页：与系统 splash 同色的夜空底 + 星月书 Logo，
 /// 停留片刻后淡入书架。保证在不渲染系统 splash 图标的定制 ROM 上
@@ -49,10 +49,7 @@ class _SplashPageState extends State<SplashPage>
               BuildContext context,
               Animation<double> animation,
               Animation<double> secondary,
-            ) => FadeTransition(
-              opacity: animation,
-              child: const BookshelfPage(),
-            ),
+            ) => FadeTransition(opacity: animation, child: const HomePage()),
       ),
     );
   }

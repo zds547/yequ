@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_book_reader/flutter_book_reader.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -24,6 +24,14 @@ class Library {
   final List<BookMeta> books = <BookMeta>[];
   final Map<String, ReadingPosition> _progress = <String, ReadingPosition>{};
 
+  /// 手动创建、当前可能没有任何书籍的分类，单独持久化在 categories.json。
+  /// 有书的分类本就可从书籍派生，这里只补「空分类」这部分，取并集展示。
+  final List<String> _manualCategories = <String>[];
+
+  /// 书架上次的分类筛选：null = 全部，'' = 未分类，其余为分类名。
+  /// 持久化在 shelf_prefs.json，启动时恢复。
+  String? _preferredFilter;
+
   bool _initialized = false;
 
   Future<void> init() async {
@@ -34,6 +42,8 @@ class Library {
     _booksDir.createSync(recursive: true);
     _loadLibrary();
     _loadProgress();
+    _loadCategories();
+    _loadPrefs();
     _initialized = true;
   }
 
@@ -104,12 +114,14 @@ class Library {
   }
 
   /// 导入一本 TXT：识别编码、切分章节、拷贝文件并登记到书架。
+  /// [category] 为分组名，空串放入「未分类」。
   Future<BookMeta> importBytes({
     required String originalName,
     required Uint8List bytes,
+    String category = '',
   }) async {
-    final TxtDecodeResult decoded = decodeTxt(bytes);
-    final List<ChapterInfo> chapters = parseChapters(decoded.text);
+    // 编码识别 + 章节切分放到后台 isolate，避免大文件阻塞 UI。
+    final ParsedBook parsed = await compute(parseBookInIsolate, bytes);
 
     final String id = DateTime.now().microsecondsSinceEpoch.toString();
     final String fileName = '$id.txt';
@@ -125,11 +137,12 @@ class Library {
       id: id,
       title: title,
       fileName: fileName,
-      encoding: decoded.encoding,
-      chapters: chapters,
+      encoding: parsed.decoded.encoding,
+      chapters: parsed.chapters,
       importedAt: DateTime.now(),
       fileSize: bytes.length,
       contentHash: contentFingerprint(bytes),
+      category: category.trim(),
     );
     books.insert(0, meta);
     await _saveLibrary();
@@ -150,6 +163,129 @@ class Library {
     _progress.remove(book.id);
     await _saveLibrary();
     await _saveProgress();
+  }
+
+  // —— 分类（单分组模型：空分类持久化，有书的分类由书籍派生，取并集） ——
+
+  void _loadCategories() {
+    final File f = File('${_dir.path}${Platform.pathSeparator}categories.json');
+    if (!f.existsSync()) return;
+    try {
+      final List<dynamic> list =
+          jsonDecode(f.readAsStringSync()) as List<dynamic>;
+      _manualCategories
+        ..clear()
+        ..addAll(
+          list
+              .map((dynamic e) => (e as String).trim())
+              .where((String s) => s.isNotEmpty),
+        );
+    } catch (_) {
+      // 分类文件损坏不影响启动。
+    }
+  }
+
+  Future<void> _saveCategories() async {
+    final File f = File('${_dir.path}${Platform.pathSeparator}categories.json');
+    await f.writeAsString(jsonEncode(_manualCategories), flush: true);
+  }
+
+  /// 全部自定义分类：先列手动创建的（可能暂无书籍），再补由书籍派生的新名字。
+  List<String> get categories {
+    final Set<String> seen = <String>{};
+    final List<String> ordered = <String>[];
+    for (final String c in _manualCategories) {
+      if (seen.add(c)) ordered.add(c);
+    }
+    for (final BookMeta b in books) {
+      if (b.category.isNotEmpty && seen.add(b.category)) {
+        ordered.add(b.category);
+      }
+    }
+    return ordered;
+  }
+
+  /// 手动新建分类（允许暂时没有书）。重名或空名返回 false。
+  Future<bool> createCategory(String name) async {
+    final String target = name.trim();
+    if (target.isEmpty || categories.contains(target)) return false;
+    _manualCategories.add(target);
+    await _saveCategories();
+    return true;
+  }
+
+  int countOfCategory(String category) =>
+      books.where((BookMeta b) => b.category == category).length;
+
+  /// 把一本书移动到指定分类（空串为未分类）。
+  Future<void> setCategory(BookMeta book, String category) async {
+    final String target = category.trim();
+    final int i = books.indexWhere((BookMeta b) => b.id == book.id);
+    if (i < 0 || books[i].category == target) return;
+    books[i] = books[i].copyWith(category: target);
+    await _saveLibrary();
+  }
+
+  /// 重命名分类：该分类下所有书与空分类登记一并更新。返回受影响的书籍数
+  /// （空分类时书籍数为 0 但仍可能完成重命名）。
+  /// 注意 [newName] 允许为空串——那是 [deleteCategory] 在把书移到未分类；
+  /// 但 UI 层的重命名对话框会拒绝空名。
+  Future<int> renameCategory(String oldName, String newName) async {
+    final String target = newName.trim();
+    if (oldName.isEmpty || oldName == target) return 0;
+    int changed = 0;
+    for (int i = 0; i < books.length; i++) {
+      if (books[i].category == oldName) {
+        books[i] = books[i].copyWith(category: target);
+        changed++;
+      }
+    }
+    final int mi = _manualCategories.indexOf(oldName);
+    if (mi >= 0) {
+      if (target.isEmpty) {
+        _manualCategories.removeAt(mi);
+      } else {
+        _manualCategories[mi] = target;
+      }
+    }
+    if (changed > 0) await _saveLibrary();
+    if (mi >= 0) await _saveCategories();
+    return changed;
+  }
+
+  /// 删除分类：从空分类登记中移除，其下书籍回到「未分类」。
+  Future<int> deleteCategory(String name) => renameCategory(name, '');
+
+  // —— 书架偏好（记住上次的分类筛选） ——
+
+  void _loadPrefs() {
+    final File f = File(
+      '${_dir.path}${Platform.pathSeparator}shelf_prefs.json',
+    );
+    if (!f.existsSync()) return;
+    try {
+      final Map<String, dynamic> data =
+          jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+      final dynamic v = data['categoryFilter'];
+      if (v == null || v is String) _preferredFilter = v as String?;
+    } catch (_) {
+      // 偏好文件损坏不影响启动，按「全部」处理。
+    }
+  }
+
+  String? get preferredFilter => _preferredFilter;
+
+  /// 记住书架当前选中的分类筛选，重启后恢复。
+  Future<void> setPreferredFilter(String? filter) async {
+    if (_preferredFilter == filter) return;
+    _preferredFilter = filter;
+    final File f = File(
+      '${_dir.path}${Platform.pathSeparator}shelf_prefs.json',
+    );
+    await f.writeAsString(
+      jsonEncode(<String, dynamic>{'categoryFilter': filter}),
+      flush: true,
+    );
   }
 
   /// 读取某本书的全文（按导入时识别出的编码解码）。

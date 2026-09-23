@@ -166,3 +166,19 @@ String chapterBody(String fullText, ChapterInfo chapter) {
   }
   return paragraphs.join('\n');
 }
+
+/// 供 [compute] 在后台 isolate 执行「编码识别 + 章节切分」。
+/// 这两步对大文件是 CPU 密集型，放在 isolate 可避免阻塞 UI 线程，
+/// 让下载完成后书架能尽快响应。返回值为纯数据，可安全跨 isolate 传递。
+class ParsedBook {
+  const ParsedBook(this.decoded, this.chapters);
+
+  final TxtDecodeResult decoded;
+  final List<ChapterInfo> chapters;
+}
+
+/// 后台 isolate 入口：必须是顶级（或静态）函数、单参数。
+ParsedBook parseBookInIsolate(Uint8List bytes) {
+  final TxtDecodeResult decoded = decodeTxt(bytes);
+  return ParsedBook(decoded, parseChapters(decoded.text));
+}

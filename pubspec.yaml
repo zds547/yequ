@@ -42,6 +42,8 @@ dependencies:
   path_provider: ^2.1.6
   file_picker: ^12.3.0
   enough_convert: ^1.6.0
+  # 搜书页内置浏览器：暴露 onDownloadStartRequest，可拦截网页里的 TXT 下载
+  flutter_inappwebview: ^6.1.5
 
 dev_dependencies:
   flutter_test:

@@ -11,6 +11,7 @@ class BookMeta {
     required this.importedAt,
     this.fileSize = 0,
     this.contentHash = '',
+    this.category = '',
   });
 
   /// 唯一 ID，同时作为本地正文文件名（[id].txt）。
@@ -29,7 +30,22 @@ class BookMeta {
   /// 原始文件内容指纹（FNV-1a 64bit 的十六进制）。
   final String contentHash;
 
+  /// 用户分组（单分类模型）；空串表示「未分类」。
+  final String category;
+
   int get chapterCount => chapters.length;
+
+  BookMeta copyWith({String? category}) => BookMeta(
+    id: id,
+    title: title,
+    fileName: fileName,
+    encoding: encoding,
+    chapters: chapters,
+    importedAt: importedAt,
+    fileSize: fileSize,
+    contentHash: contentHash,
+    category: category ?? this.category,
+  );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
@@ -40,6 +56,7 @@ class BookMeta {
     'importedAt': importedAt.millisecondsSinceEpoch,
     'fileSize': fileSize,
     'contentHash': contentHash,
+    'category': category,
   };
 
   factory BookMeta.fromJson(Map<String, dynamic> json) => BookMeta(
@@ -55,5 +72,6 @@ class BookMeta {
     ),
     fileSize: (json['fileSize'] as num?)?.toInt() ?? 0,
     contentHash: json['contentHash'] as String? ?? '',
+    category: (json['category'] as String? ?? '').trim(),
   );
 }
